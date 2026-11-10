@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+venv/
+.venv/
+.env
+dataset/
+dataset_fast/
+models/
+attendance/*.csv
+*.DS_Store
