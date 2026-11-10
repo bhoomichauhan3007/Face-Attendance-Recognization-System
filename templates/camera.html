@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Camera Feed</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://unpkg.com/feather-icons"></script>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <i data-feather="cpu"></i> DeepFace
+        </div>
+        <ul class="nav-links">
+            <li><a href="/dashboard"><i data-feather="home"></i> Dashboard</a></li>
+            <li><a href="/start" class="active"><i data-feather="camera"></i> Live Scanner</a></li>
+            <li><a href="/attendance"><i data-feather="users"></i> Records</a></li>
+            <li><a href="/dataset"><i data-feather="database"></i> Dataset</a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <div class="topbar">
+            <h2>Live Identity Scanner</h2>
+            <div class="clock" id="clock">00:00:00</div>
+        </div>
+
+        <div class="content-wrapper">
+            <!-- Lecture Selection -->
+            <div id="lecture-selection" style="text-align: center; margin-top: 40px;">
+                <h3 style="font-size: 24px; margin-bottom: 30px;">Select Lecture to Start Attendance</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; max-width: 800px; margin-left: auto; margin-right: auto;">
+                    <button style="padding: 20px; font-size: 16px; background-color: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)'" onclick="startCamera('Artificial intelligence and machine learning')">1) Artificial intelligence and machine learning</button>
+                    <button style="padding: 20px; font-size: 16px; background-color: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)'" onclick="startCamera('Operating systems')">2) Operating systems</button>
+                    <button style="padding: 20px; font-size: 16px; background-color: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)'" onclick="startCamera('Computer networks')">3) Computer networks</button>
+                    <button style="padding: 20px; font-size: 16px; background-color: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)'" onclick="startCamera('Design analysis and algorithms')">4) Design analysis and algorithms</button>
+                    <button style="padding: 20px; font-size: 16px; background-color: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)'" onclick="startCamera('Design thinking and innovation')">5) Design thinking and innovation</button>
+                    <button style="padding: 20px; font-size: 16px; background-color: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)'" onclick="startCamera('Microprocessor')">6) Microprocessor</button>
+                </div>
+            </div>
+
+            <!-- Camera Setup -->
+            <div class="camera-wrapper" id="camera-section" style="display: none;">
+                <div style="display:flex; justify-content:space-between; width:100%; max-width:720px; align-items:center; margin-bottom:20px;">
+                    <div>
+                        <h3 style="margin:0;">Attendance Stream - <span id="current-lecture"></span></h3>
+                        <p style="color:var(--text-secondary); font-size:13px; margin:5px 0 0 0;">Face anywhere in the camera to be identified.</p>
+                        <p style="color:#10b981; font-weight: bold; margin:10px 0 0 0; font-size: 18px;">Present Students: <span id="student-count">0</span></p>
+                    </div>
+                    <div style="display: flex; align-items: center;">
+                        <button onclick="stopCamera()" style="background-color: #ef4444; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; margin-right: 15px; font-weight: bold; display: flex; align-items: center; gap: 5px;"><i data-feather="stop-circle" style="width: 16px; height: 16px;"></i> Stop</button>
+                        <div class="status-badge"><div class="status-dot"></div> Processing</div>
+                    </div>
+                </div>
+                
+                <img id="video-stream" src="" class="camera-feed" alt="Video Feed Loading..." />
+            </div>
+        </div>
+    </main>
+
+    <script>
+        feather.replace();
+        setInterval(() => {
+            document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+        }, 1000);
+
+        let activeLecture = null;
+        let statsInterval = null;
+
+        function startCamera(lectureName) {
+            activeLecture = lectureName;
+            document.getElementById('lecture-selection').style.display = 'none';
+            document.getElementById('camera-section').style.display = 'flex';
+            document.getElementById('current-lecture').textContent = lectureName;
+            document.getElementById('video-stream').src = "/video_feed?lecture=" + encodeURIComponent(lectureName);
+            
+            // Start polling stats
+            fetchStats();
+            statsInterval = setInterval(fetchStats, 2000);
+        }
+
+        function stopCamera() {
+            activeLecture = null;
+            document.getElementById('lecture-selection').style.display = 'block';
+            document.getElementById('camera-section').style.display = 'none';
+            // Important to clear the src to stop the stream
+            document.getElementById('video-stream').src = "";
+            if (statsInterval) clearInterval(statsInterval);
+        }
+
+        function fetchStats() {
+            if (!activeLecture) return;
+            fetch('/api/stats?lecture=' + encodeURIComponent(activeLecture))
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('student-count').textContent = data.present || 0;
+                })
+                .catch(err => console.error("Stats Error:", err));
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dataset View - AI Attendance</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            background: radial-gradient(circle at center, #1e1b4b 0%, #080a18 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Particles Background */
+        .particles {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.15) 0%, transparent 50%);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Top Bar */
+        .topbar {
+            height: 70px;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            z-index: 10;
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            padding: 8px 20px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .back-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* Tree UI container */
+        .tree-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            padding: 40px;
+        }
+
+        /* Root Node */
+        .root-node {
+            background: transparent;
+            border: 2px solid rgba(59, 130, 246, 0.6);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 12px;
+            font-size: 20px;
+            font-weight: 600;
+            position: relative;
+            margin-bottom: 60px;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+        }
+
+        /* Connecting Lines */
+        .root-node::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            bottom: -32px;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 30px;
+            background: #3b82f6;
+            box-shadow: 0 0 8px #3b82f6;
+        }
+
+        /* Horizontal branch line wrapper */
+        .branch-container {
+            position: relative;
+            display: flex;
+            gap: 20px;
+            padding-top: 30px;
+        }
+
+        .branch-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50px;
+            right: 50px;
+            height: 2px;
+            background: #3b82f6;
+            box-shadow: 0 0 8px #3b82f6;
+        }
+
+        /* Folder Item */
+        .folder-item {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            /* width: 140px; */
+            gap: 15px;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .folder-item::before {
+            content: '';
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 30px;
+            background: #3b82f6;
+            box-shadow: 0 0 8px #3b82f6;
+        }
+
+        .folder-item:hover {
+            transform: translateY(-10px);
+        }
+
+        .folder-icon {
+            width: 120px;
+            height: 100px;
+            background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+            border-radius: 12px 12px 12px 0;
+            position: relative;
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .folder-icon::before {
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: 0;
+            width: 40px;
+            height: 12px;
+            background: #2563eb;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .folder-icon img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 2;
+        }
+
+        .folder-name {
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            color: #e2e8f0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* Loading */
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="particles"></div>
+
+    <div class="topbar">
+        <div style="font-size:18px; font-weight:600; display:flex; align-items:center; gap:10px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+            Dataset Viewer
+        </div>
+        <a href="/" class="back-btn">← Back to Dashboard</a>
+    </div>
+
+    <div class="tree-container">
+        <div class="root-node">Dataset</div>
+        <div class="branch-container" id="dataset-grid">
+            <div id="loading">Scanning Neural Database...</div>
+        </div>
+    </div>
+
+    <script>
+        async function loadDataset() {
+            try {
+                const response = await fetch('/api/dataset');
+                const data = await response.json();
+                
+                const grid = document.getElementById('dataset-grid');
+                grid.innerHTML = '';
+                
+                if (data.length === 0) {
+                    grid.innerHTML = '<div style="color:#94a3b8;">No dataset folders found.</div>';
+                    return;
+                }
+                
+                data.forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'folder-item';
+                    
+                    itemDiv.innerHTML = `
+                        <div class="folder-icon">
+                            <img src="/dataset_img/${item.folder}" alt="${item.name}" onerror="this.style.display='none'">
+                        </div>
+                        <div class="folder-name">${item.name}</div>
+                    `;
+                    grid.appendChild(itemDiv);
+                });
+            } catch (error) {
+                console.error("Failed to load dataset", error);
+            }
+        }
+        
+        loadDataset();
+    </script>
+</body>
+</html>

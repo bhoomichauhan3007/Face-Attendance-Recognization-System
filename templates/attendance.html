@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Database - SciFi UI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --bg: #090b14;
+            --panel: rgba(16, 20, 38, 0.8);
+            --border: rgba(59, 130, 246, 0.3);
+            --blue: #3b82f6;
+            --blue-glow: rgba(59, 130, 246, 0.5);
+            --text-main: #e2e8f0;
+            --text-dim: #64748b;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            background: radial-gradient(circle at top right, #111836, #090b14);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Sidebar styles copied to keep structure intact but dark */
+        .sidebar {
+            width: 260px;
+            background: rgba(10, 15, 30, 0.9);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            font-size: 22px;
+            font-weight: 700;
+            color: #fff;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-shadow: 0 0 10px var(--blue-glow);
+        }
+
+        .nav-links { list-style: none; padding: 24px 0; margin: 0; }
+        .nav-links li { padding: 0 20px; margin-bottom: 8px; }
+        .nav-links a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            color: var(--text-dim);
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        .nav-links a:hover, .nav-links a.active {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--blue);
+            box-shadow: inset 3px 0 0 var(--blue);
+            text-shadow: 0 0 8px var(--blue-glow);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .topbar {
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(10, 15, 30, 0.5);
+        }
+
+        .hud-container {
+            display: grid;
+            grid-template-columns: 2fr 1.2fr;
+            gap: 24px;
+            padding: 24px;
+            height: calc(100vh - 120px);
+        }
+
+        /* Left side Grid */
+        .scan-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        ::-webkit-scrollbar-thumb { background: var(--blue); border-radius: 4px; }
+
+        .scan-card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            box-shadow: inset 0 0 20px rgba(59, 130, 246, 0.05);
+            transition: all 0.3s;
+        }
+
+        .scan-card:hover {
+            box-shadow: inset 0 0 30px rgba(59, 130, 246, 0.2), 0 0 15px var(--blue-glow);
+            border-color: var(--blue);
+        }
+
+        .scan-card.active {
+            border-color: #10b981;
+            box-shadow: inset 0 0 30px rgba(16, 185, 129, 0.15), 0 0 15px rgba(16, 185, 129, 0.4);
+        }
+
+        /* Make images look like sci-fi holograms */
+        .scan-img {
+            width: 120px;
+            height: 140px;
+            object-fit: cover;
+            border-radius: 8px;
+            filter: contrast(130%) sepia(100%) hue-rotate(185deg) brightness(0.8);
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .scan-img-wrapper {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        
+        /* Grid lines over face */
+        .scan-img-wrapper::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: 
+                linear-gradient(rgba(59, 130, 246, 0.2) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59, 130, 246, 0.2) 1px, transparent 1px);
+            background-size: 20px 20px;
+            z-index: 3;
+            pointer-events: none;
+            border-radius: 8px;
+        }
+
+        .scan-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .scan-status {
+            font-size: 12px;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--blue);
+            width: 98%;
+            box-shadow: 0 0 10px var(--blue);
+        }
+        .progress-fill.active { background: #10b981; box-shadow: 0 0 10px #10b981; }
+
+        /* Right Panel: Attendance Log */
+        .log-panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .log-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .log-item {
+            background: rgba(255,255,255,0.03);
+            border-left: 3px solid var(--blue);
+            padding: 12px 16px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s;
+        }
+
+        .log-item:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .export-btn {
+            background: var(--blue);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        /* Decorative stats */
+        .hud-stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .stat-box { flex: 1; }
+        .stat-val { font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+        .stat-lbl { font-size: 12px; color: var(--text-dim); text-transform: uppercase; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <i data-feather="cpu"></i> DeepFace
+        </div>
+        <ul class="nav-links">
+            <li><a href="/dashboard"><i data-feather="home"></i> Dashboard</a></li>
+            <li><a href="/start"><i data-feather="camera"></i> Live Scanner</a></li>
+            <li><a href="/attendance" class="active"><i data-feather="users"></i> Records</a></li>
+            <li><a href="/dataset"><i data-feather="database"></i> Dataset</a></li>
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <div class="topbar">
+            <h2>Identity Analytics</h2>
+            <div style="font-family: monospace; color: var(--blue);">SYS. TIME: <span id="clock"></span></div>
+        </div>
+
+        <div class="hud-container">
+            <!-- Left Grid -->
+            <div class="scan-grid" id="facesGrid">
+                <!-- Javascript will populate holographic faces here -->
+            </div>
+
+            <!-- Right Panel -->
+            <div class="log-panel">
+                <div class="log-header" style="flex-direction: column; align-items: stretch; gap: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="margin:0;">Attendance Log</h3>
+                        <button class="export-btn" onclick="downloadExcel()"><i data-feather="download" style="width:14px;height:14px;"></i> Export to Excel</button>
+                    </div>
+                    <div>
+                        <input type="text" id="logSearch" placeholder="Search by Student Name or Lecture..." style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: rgba(0,0,0,0.2); color: white; font-family: inherit; font-size: 14px; box-sizing: border-box;" onkeyup="filterLogs()">
+                    </div>
+                </div>
+                
+                <div class="hud-stats">
+                    <div class="stat-box">
+                        <div class="stat-val" id="totalChecks">0</div>
+                        <div class="stat-lbl">Logs Today</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-val" id="modelConf">99.8%</div>
+                        <div class="stat-lbl">Avg Confidence</div>
+                    </div>
+                </div>
+
+                <div class="log-list" id="logList">
+                    <!-- Logs go here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        feather.replace();
+        setInterval(() => { document.getElementById('clock').textContent = new Date().toLocaleTimeString(); }, 1000);
+
+        let attendanceData = [];
+        let datasetData = [];
+
+        // Load both dataset (for faces) and attendance (for logic)
+        Promise.all([
+            fetch('/api/dataset').then(r => r.json()),
+            fetch('/api/attendance').then(r => r.json())
+        ]).then(([dataset, attendance]) => {
+            datasetData = dataset;
+            attendanceData = attendance;
+            
+            // Render logs
+            const logList = document.getElementById('logList');
+            document.getElementById('totalChecks').textContent = attendance.length;
+            
+            // Render initial logs
+            renderLogs(attendance);
+
+            // Render Face Grid Models
+            const facesGrid = document.getElementById('facesGrid');
+            const todayDate = new Date().toISOString().split('T')[0];
+            datasetData.forEach(person => {
+                const logEntry = attendance.find(r => r.Date === todayDate && r.Name === person.name);
+                const isPresent = !!logEntry;
+                const activeClass = isPresent ? 'active' : '';
+                const matchText = isPresent ? 'VERIFIED' : 'STANDBY';
+                const pColor = isPresent ? 'active' : '';
+                const lectureInfo = isPresent ? `Present in <span style="color:#10b981; font-weight:600;">${logEntry.Lecture || 'Unknown'}</span>` : `Waiting for scan`;
+
+                facesGrid.innerHTML += `
+                    <div class="scan-card ${activeClass}">
+                        <div class="scan-img-wrapper">
+                            <img src="/dataset_img/${person.folder}" class="scan-img" onerror="this.style.display='none'">
+                        </div>
+                        <div class="scan-name">${person.name}</div>
+                        <div class="scan-status" style="margin-bottom: 6px;">
+                            <i data-feather="${isPresent ? 'check-circle' : 'activity'}" style="width:12px;height:12px; color:${isPresent?'#10b981':'var(--text-dim)'}"></i> 
+                            ${matchText}
+                        </div>
+                        <div style="font-size: 11px; color: var(--text-dim); text-align: center; margin-bottom: 5px;">
+                            ${lectureInfo}
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill ${pColor}" style="width:${isPresent ? '98%' : '20%'}"></div>
+                        </div>
+                    </div>
+                `;
+            });
+            feather.replace();
+        });
+
+        function renderLogs(logs) {
+            const logList = document.getElementById('logList');
+            logList.innerHTML = '';
+            if(!logs || logs.length === 0) {
+                logList.innerHTML = '<div style="color:var(--text-dim); text-align:center; margin-top:20px;">No matching records found.</div>';
+                return;
+            }
+            logs.forEach(log => {
+                logList.innerHTML += `
+                    <div class="log-item">
+                        <div>
+                            <div style="color:#fff; font-weight:500;">${log.Name}</div>
+                            <div style="font-size:12px; color:var(--text-dim);">${log.Date} | ${log.Lecture || 'Unknown'}</div>
+                        </div>
+                        <div style="color:var(--blue); font-family:monospace;">${log.Time}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function filterLogs() {
+            const query = document.getElementById('logSearch').value.toLowerCase();
+            const filtered = attendanceData.filter(log => 
+                log.Name.toLowerCase().includes(query) || 
+                (log.Lecture && log.Lecture.toLowerCase().includes(query)) ||
+                log.Date.includes(query)
+            );
+            renderLogs(filtered);
+        }
+
+        function downloadExcel() {
+            // Create a new workbook
+            const wb = XLSX.utils.book_new();
+            
+            // Format the data mapping for headers and titles
+            const excelData = [
+                ["Face Attendance System - Official Report"],
+                ["Generated on: " + new Date().toLocaleString()],
+                [], // Empty row buffer
+                ["S.No", "Student Name", "Date", "Time", "Lecture Context"] // Professional Headers
+            ];
+            
+            attendanceData.forEach((row, index) => {
+                excelData.push([
+                    index + 1,
+                    row.Name,
+                    row.Date,
+                    row.Time,
+                    row.Lecture || 'Unknown'
+                ]);
+            });
+
+            // Convert to worksheet
+            const ws = XLSX.utils.aoa_to_sheet(excelData);
+            
+            // Provide custom column widths for a professional look
+            ws['!cols'] = [
+                { wch: 8 },  // S.No
+                { wch: 25 }, // Name
+                { wch: 15 }, // Date
+                { wch: 15 }, // Time
+                { wch: 45 }  // Lecture
+            ];
+
+            // Append Worksheet to Workbook
+            XLSX.utils.book_append_sheet(wb, ws, "Attendance Report");
+
+            // Trigger Download
+            const fileName = `Official_Attendance_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        }
+    </script>
+</body>
+</html>

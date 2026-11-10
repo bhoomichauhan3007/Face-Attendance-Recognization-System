@@ -7,4 +7,6 @@ dataset/
 dataset_fast/
 models/
 attendance/*.csv
+*.pkl
 *.DS_Store
+Face Attendance Recognization System/
